@@ -5,7 +5,7 @@
 ## 🚀 项目演示 (Demo)
 *https://igkan.github.io/KangYe/*
 
-![image-20260116162237384](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20260116162237384.png)
+![项目预览图](Images/Preview.jpg)
 
 
 
