@@ -1,75 +1,450 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>康业全景图管理系统</title>
     <style>
         /* 样式完全保留，未做任何修改 */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); color: white; min-height: 100vh; overflow-x: hidden; padding: 20px; }
-        .container { max-width: 1800px; margin: 0 auto; background: rgba(0, 0, 0, 0.3); border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 40px); }
-        header { text-align: center; padding: 20px; background: rgba(0, 0, 0, 0.5); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        h1 { font-size: 2.2rem; margin-bottom: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
-        .main-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        .floor-plan-section { flex: 2; background: rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; position: relative; }
-        .preview-section { flex: 1; background: rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; border-top: 2px solid rgba(255, 255, 255, 0.1); }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(0, 0, 0, 0.5); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .section-title { font-size: 1.2rem; color: #fdbb2d; font-weight: bold; }
-        .section-controls { display: flex; gap: 10px; flex-wrap: wrap; }
-        .control-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 6px 12px; border-radius: 5px; cursor: pointer; transition: all 0.3s; font-size: 0.85rem; white-space: nowrap; }
-        .control-btn:hover { background: rgba(255, 255, 255, 0.2); }
-        .control-btn.active { background: #fdbb2d; color: #1a2a6c; font-weight: bold; }
-        .floor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
-        .floor-canvas-container { flex: 3; position: relative; background: rgba(0, 0, 0, 0.2); border-right: 1px solid rgba(255, 255, 255, 0.1); }
-        #floor-canvas { width: 100%; height: 100%; cursor: crosshair; display: block; }
-        .floor-controls-panel { flex: 1; max-width: 300px; padding: 15px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .upload-area { border: 2px dashed rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
-        .upload-area:hover { border-color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.05); }
-        .upload-icon { font-size: 40px; margin-bottom: 10px; color: #fdbb2d; }
-        .browse-btn { background: #fdbb2d; color: #1a2a6c; border: none; padding: 8px 16px; border-radius: 50px; font-weight: bold; cursor: pointer; transition: all 0.3s; font-size: 0.8rem; }
-        .control-group { background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 8px; }
-        .control-group-title { font-size: 0.9rem; margin-bottom: 10px; color: #fdbb2d; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px; }
-        .floor-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .preview-container { flex: 1; display: flex; gap: 10px; overflow-x: auto; padding: 15px; align-items: center; }
-        .preview-item { min-width: 200px; height: 150px; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; flex-shrink: 0; }
-        .preview-img { width: 100%; height: 100%; object-fit: cover; }
-        .preview-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.7); padding: 8px; }
-        .preview-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .panorama-fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; flex-direction: row; }
-        .panorama-list-container { width: 300px; background: rgba(0, 0, 0, 0.8); border-right: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; overflow: hidden; }
-        .panorama-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .panorama-list-item { background: rgba(255, 255, 255, 0.1); border-radius: 5px; padding: 12px; margin-bottom: 8px; cursor: pointer; border: 2px solid transparent; }
-        .panorama-list-item.active { background: rgba(255, 255, 255, 0.2); border-color: #fdbb2d; }
-        .panorama-viewer-container { flex: 1; display: flex; flex-direction: column; }
-        .panorama-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0, 0, 0, 0.7); }
-        .panorama-close { background: #ff4444; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; }
-        .panorama-viewer { flex: 1; position: relative; }
-        #panorama-canvas-box { width: 100%; height: 100%; }
-        .panorama-controls { display: flex; justify-content: center; gap: 15px; padding: 15px; background: rgba(0, 0, 0, 0.5); }
-        .panorama-btn { background: rgba(255, 255, 255, 0.1); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; }
-        .save-load-buttons { display: flex; gap: 8px; }
-        .data-operation-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 12px; border-radius: 50px; cursor: pointer; transition: all 0.3s; font-size: 0.8rem; flex: 1; text-align: center; }
-        .data-operation-btn.export { background: #9C27B0; }
-        .data-operation-btn.import { background: #FF9800; }
-        .point-association-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 2000; display: none; justify-content: center; align-items: center; }
-        .point-association-content { background: #2a2a2a; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
-        .point-association-header { padding: 15px 20px; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: space-between; align-items: center; }
-        .point-association-body { flex: 1; display: flex; overflow: hidden; }
-        .point-list-container { width: 300px; border-right: 1px solid rgba(255, 255, 255, 0.1); overflow-y: auto; padding: 10px; }
-        .panorama-list-container-modal { flex: 1; overflow-y: auto; padding: 10px; }
-        .panorama-list-item-modal { background: rgba(255, 255, 255, 0.1); border-radius: 5px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .panorama-delete-btn { background: #ff4444; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .floor-plan-section {
+            flex: 2;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .preview-section {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #fdbb2d;
+            font-weight: bold;
+        }
+
+        .section-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.active {
+            background: #fdbb2d;
+            color: #1a2a6c;
+            font-weight: bold;
+        }
+
+        .floor-content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .floor-canvas-container {
+            flex: 3;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #floor-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .floor-controls-panel {
+            flex: 1;
+            max-width: 300px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            color: #fdbb2d;
+        }
+
+        .browse-btn {
+            background: #fdbb2d;
+            color: #1a2a6c;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .control-group-title {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #fdbb2d;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .floor-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .preview-container {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 15px;
+            align-items: center;
+        }
+
+        .preview-item {
+            min-width: 200px;
+            height: 150px;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            flex-shrink: 0;
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+        }
+
+        .preview-name {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .panorama-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: none;
+            flex-direction: row;
+        }
+
+        .panorama-list-container {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panorama-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .panorama-list-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .panorama-list-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #fdbb2d;
+        }
+
+        .panorama-viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panorama-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .panorama-close {
+            background: #ff4444;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .panorama-viewer {
+            flex: 1;
+            position: relative;
+        }
+
+        #panorama-canvas-box {
+            width: 100%;
+            height: 100%;
+        }
+
+        .panorama-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .panorama-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .save-load-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .data-operation-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.8rem;
+            flex: 1;
+            text-align: center;
+        }
+
+        .data-operation-btn.export {
+            background: #9C27B0;
+        }
+
+        .data-operation-btn.import {
+            background: #FF9800;
+        }
+
+        .point-association-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .point-association-content {
+            background: #2a2a2a;
+            width: 90%;
+            max-width: 800px;
+            height: 80%;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .point-association-header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .point-association-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .point-list-container {
+            width: 300px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .panorama-list-container-modal {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .panorama-list-item-modal {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panorama-delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <header><h1>全景图管理系统</h1></header>
+        <header>
+            <h1>全景图管理系统</h1>
+        </header>
         <div class="main-content">
             <section class="floor-plan-section">
                 <div class="section-header">
                     <div class="section-title">平面图标注 - 当前楼层: <span id="current-floor-display">1</span></div>
                     <div class="section-controls">
+                        <button class="control-btn" id="view-point-btn">查看点位</button>
                         <button class="control-btn" id="add-point-btn">添加点位</button>
                         <button class="control-btn" id="associate-btn">关联全景图</button>
                         <button class="control-btn" id="clear-points-btn">清除点位</button>
@@ -107,9 +482,9 @@
             </section>
             <section class="preview-section">
                 <div class="section-header">
-                    <div class="section-title">楼层 <span id="preview-floor-display">1</span> 预览 (<span id="panorama-count">0</span>张)</div>
+                    <div class="section-title">楼层 <span id="preview-floor-display">1</span> 预览 (<span
+                            id="panorama-count">0</span>张)</div>
                     <div class="section-controls">
-                        <!-- <button class="control-btn" id="upload-panorama-btn">批量上传全景图</button> -->
                         <button class="control-btn" id="clear-all-data-btn" style="background:#ff4444;">清空所有数据</button>
                     </div>
                 </div>
@@ -127,7 +502,9 @@
                 <div id="panorama-title">全景查看器</div>
                 <button class="panorama-close" id="panorama-close">×</button>
             </div>
-            <div class="panorama-viewer"><div id="panorama-canvas-box"></div></div>
+            <div class="panorama-viewer">
+                <div id="panorama-canvas-box"></div>
+            </div>
             <div class="panorama-controls">
                 <button class="panorama-btn" id="prev-panorama-btn">◀</button>
                 <button class="panorama-btn" id="reset-panorama-view-btn">↺</button>
@@ -155,7 +532,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
-    
+
     <script>
         class IndexedDBHelper {
             constructor() { this.dbName = 'PanoramaSystemDB'; this.dbVersion = 1; this.storeName = 'appData'; this.db = null; }
@@ -198,7 +575,7 @@
                     this.loadAllData();
                 });
             }
-            
+
             initVariables() {
                 this.floorCanvas = document.getElementById('floor-canvas');
                 this.floorCtx = this.floorCanvas.getContext('2d');
@@ -210,7 +587,7 @@
                 this.mode = 'normal';
                 this.scale = 1.0; this.offsetX = 0; this.offsetY = 0;
                 // --- 恢复点位尺寸变量 ---
-                this.pointRadius = 32; 
+                this.pointRadius = 32;
                 this.pointFontSize = 30;
                 this.STORAGE_KEYS = { FLOOR_PLANS: 'floorPlans', POINTS: 'points', PANORAMAS: 'panos', ASSOCIATIONS: 'assocs' };
             }
@@ -240,7 +617,7 @@
 
             setupEventListeners() {
                 document.getElementById('browse-floor-btn').onclick = () => document.getElementById('file-input-floor').click();
-                document.getElementById('file-input-floor').onchange = (e) => { if(e.target.files[0]) this.loadFloorPlan(e.target.files[0]); };
+                document.getElementById('file-input-floor').onchange = (e) => { if (e.target.files[0]) this.loadFloorPlan(e.target.files[0]); };
                 document.getElementById('add-floor-btn').onclick = () => {
                     const floors = Object.keys(this.floorImages).map(f => parseInt(f));
                     const nextFloor = (floors.length > 0 ? Math.max(...floors) + 1 : 1).toString();
@@ -250,7 +627,11 @@
                 };
                 document.getElementById('export-data-btn').onclick = () => this.exportData();
                 document.getElementById('import-data-btn').onclick = () => document.getElementById('file-import-data').click();
-                document.getElementById('file-import-data').onchange = (e) => { if(e.target.files[0]) this.importData(e.target.files[0]); };
+                document.getElementById('file-import-data').onchange = (e) => { if (e.target.files[0]) this.importData(e.target.files[0]); };
+                
+                // 新增查看点位按钮事件
+                document.getElementById('view-point-btn').onclick = () => this.setMode('view');
+
                 document.getElementById('add-point-btn').onclick = () => this.setMode('add');
                 document.getElementById('associate-btn').onclick = () => this.setMode('associate');
                 document.getElementById('clear-points-btn').onclick = () => this.setMode('delete');
@@ -258,7 +639,7 @@
                 document.getElementById('zoom-in-btn').onclick = () => { this.scale *= 1.1; this.renderFloorPlan(); };
                 document.getElementById('zoom-out-btn').onclick = () => { this.scale /= 1.1; this.renderFloorPlan(); };
                 document.getElementById('reset-view-btn').onclick = () => { this.autoAdjustImage(); this.renderFloorPlan(); };
-                document.getElementById('clear-all-data-btn').onclick = () => { if(confirm('确定清空吗？')) this.clearAllData(); };
+                document.getElementById('clear-all-data-btn').onclick = () => { if (confirm('确定清空吗？')) this.clearAllData(); };
                 this.floorCanvas.onclick = (e) => this.handleCanvasClick(e);
                 window.onresize = () => this.adjustCanvasSize();
                 this.adjustCanvasSize();
@@ -270,8 +651,14 @@
             setMode(mode) {
                 this.mode = mode;
                 document.querySelectorAll('.section-controls .control-btn').forEach(b => b.classList.remove('active'));
-                const btnIds = {'add':'add-point-btn','associate':'associate-btn','delete':'clear-points-btn','modify':'modify-point-btn'};
-                if(btnIds[mode]) document.getElementById(btnIds[mode]).classList.add('active');
+                const btnIds = { 
+                    'view': 'view-point-btn',
+                    'add': 'add-point-btn', 
+                    'associate': 'associate-btn', 
+                    'delete': 'clear-points-btn', 
+                    'modify': 'modify-point-btn' 
+                };
+                if (btnIds[mode]) document.getElementById(btnIds[mode]).classList.add('active');
             }
 
             async saveAllData() {
@@ -284,7 +671,7 @@
 
             async loadAllData() {
                 const floorData = await this.idb.getItem(this.STORAGE_KEYS.FLOOR_PLANS);
-                if (floorData) { this.floorImages = {}; for (let f in floorData) { const img = new Image(); img.src = floorData[f]; this.floorImages[f] = img; } } 
+                if (floorData) { this.floorImages = {}; for (let f in floorData) { const img = new Image(); img.src = floorData[f]; this.floorImages[f] = img; } }
                 else { this.createDefaultFloorPlan('1'); }
                 this.floorPoints = await this.idb.getItem(this.STORAGE_KEYS.POINTS) || [];
                 this.panoramas = await this.idb.getItem(this.STORAGE_KEYS.PANORAMAS) || [];
@@ -293,14 +680,13 @@
                 this.updateFloorButtonsUI(); this.switchFloor(this.currentFloor);
             }
 
-            // --- 导出文件名规则 ---
             exportData() {
                 const now = new Date();
                 const timestamp = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
                 const fileName = `${timestamp}_${Object.keys(this.floorImages).length}层_${this.panoramas.length}张.json`;
                 const floorData = {}; for (let f in this.floorImages) floorData[f] = this.floorImages[f].src;
                 const data = { floorPlans: floorData, points: this.floorPoints, panoramas: this.panoramas, associations: Array.from(this.pointPanoramaMap.entries()) };
-                const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+                const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
             }
 
@@ -318,10 +704,14 @@
             }
 
             createDefaultFloorPlan(floor) {
-                const cvs = document.createElement('canvas'); cvs.width = 800; cvs.height = 600;
-                const ctx = cvs.getContext('2d'); ctx.fillStyle = '#333'; ctx.fillRect(0,0,800,600);
-                ctx.fillStyle = '#fff'; ctx.font = '30px Arial'; ctx.fillText('Floor ' + floor, 350, 300);
-                const img = new Image(); img.src = cvs.toDataURL(); this.floorImages[floor] = img;
+                const cvs = document.createElement('canvas');
+                cvs.width = 800;
+                cvs.height = 600;
+                const ctx = cvs.getContext('2d');
+                ctx.clearRect(0, 0, 800, 600);
+                const img = new Image();
+                img.src = cvs.toDataURL();
+                this.floorImages[floor] = img;
             }
 
             loadFloorPlan(file) {
@@ -338,18 +728,27 @@
                 const x = (e.clientX - rect.left - this.offsetX) / this.scale;
                 const y = (e.clientY - rect.top - this.offsetY) / this.scale;
                 const clickedPoint = this.floorPoints.find(p => p.floor === this.currentFloor && Math.hypot(p.x - x, p.y - y) < this.pointRadius / this.scale);
+                
                 if (this.mode === 'add') {
-                    const id = `${this.currentFloor}F-${this.floorPoints.filter(p=>p.floor===this.currentFloor).length + 1}`;
+                    const id = `${this.currentFloor}F-${this.floorPoints.filter(p => p.floor === this.currentFloor).length + 1}`;
                     this.floorPoints.push({ id, x, y, floor: this.currentFloor });
                     this.renderFloorPlan(); this.saveAllData();
                 } else if (this.mode === 'delete' && clickedPoint) {
                     this.floorPoints = this.floorPoints.filter(p => p !== clickedPoint);
                     this.renderFloorPlan(); this.saveAllData();
                 } else if (this.mode === 'modify' && clickedPoint) {
-                    const nid = prompt('修改编号:', clickedPoint.id); if(nid) { clickedPoint.id = nid; this.renderFloorPlan(); this.saveAllData(); }
+                    const nid = prompt('修改编号:', clickedPoint.id); if (nid) { clickedPoint.id = nid; this.renderFloorPlan(); this.saveAllData(); }
                 } else if (this.mode === 'associate' && clickedPoint) {
                     this.startAssociate(clickedPoint.id);
-                } else if (clickedPoint) { this.viewPoint(clickedPoint.id); }
+                } else if (this.mode === 'view' && clickedPoint) {
+                    // 新增：查看点位模式逻辑
+                    const idxs = this.pointPanoramaMap.get(clickedPoint.id);
+                    if (idxs && idxs.length > 0) {
+                        this.openPano(idxs[0], clickedPoint.id);
+                    } else {
+                        alert('该点位暂无全景图，请使用"关联全景图"功能进行添加。');
+                    }
+                }
             }
 
             startAssociate(pointId) {
@@ -359,11 +758,42 @@
                     files.forEach(file => {
                         const reader = new FileReader();
                         reader.onload = (re) => {
-                            this.panoramas.push({ name: file.name, url: re.target.result });
-                            const idx = this.panoramas.length - 1;
-                            if (!this.pointPanoramaMap.has(pointId)) this.pointPanoramaMap.set(pointId, []);
-                            this.pointPanoramaMap.get(pointId).push(idx);
-                            this.updatePreviewItems(); this.renderFloorPlan(); this.saveAllData();
+                            const img = new Image();
+                            img.src = re.target.result;
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                const maxWidth = 4096;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > maxWidth) {
+                                    height = (maxWidth / width) * height;
+                                    width = maxWidth;
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
+                                
+                                // --- 修改：文件名重命名逻辑 (原始命名+时间) ---
+                                const now = new Date();
+                                const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+                                const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                                const ext = file.name.substring(file.name.lastIndexOf('.'));
+                                const newName = `${originalName}_${timeStr}${ext}`;
+
+                                this.panoramas.push({ name: newName, url: compressedBase64 });
+                                const idx = this.panoramas.length - 1;
+                                if (!this.pointPanoramaMap.has(pointId)) this.pointPanoramaMap.set(pointId, []);
+                                this.pointPanoramaMap.get(pointId).push(idx);
+
+                                this.updatePreviewItems();
+                                this.renderFloorPlan();
+                                this.saveAllData();
+                            };
                         };
                         reader.readAsDataURL(file);
                     });
@@ -404,10 +834,9 @@
                 animate();
             }
 
-            // --- 核心恢复：绘制逻辑使用 pointRadius 和 pointFontSize ---
             renderFloorPlan() {
                 const img = this.floorImages[this.currentFloor]; if (!img) return;
-                this.floorCtx.clearRect(0,0,this.floorCanvas.width, this.floorCanvas.height);
+                this.floorCtx.clearRect(0, 0, this.floorCanvas.width, this.floorCanvas.height);
                 this.floorCtx.save();
                 this.floorCtx.translate(this.offsetX, this.offsetY);
                 this.floorCtx.scale(this.scale, this.scale);
@@ -415,11 +844,11 @@
                 this.floorPoints.filter(p => p.floor === this.currentFloor).forEach(p => {
                     const hasPano = this.pointPanoramaMap.has(p.id) && this.pointPanoramaMap.get(p.id).length > 0;
                     this.floorCtx.fillStyle = hasPano ? '#4CAF50' : '#fdbb2d';
-                    this.floorCtx.beginPath(); 
-                    this.floorCtx.arc(p.x, p.y, this.pointRadius, 0, Math.PI*2); // 使用原定的 32
+                    this.floorCtx.beginPath();
+                    this.floorCtx.arc(p.x, p.y, this.pointRadius, 0, Math.PI * 2);
                     this.floorCtx.fill();
-                    this.floorCtx.fillStyle = '#fff'; 
-                    this.floorCtx.font = `bold ${this.pointFontSize}px Arial`; // 使用原定的 30px
+                    this.floorCtx.fillStyle = '#fff';
+                    this.floorCtx.font = `bold ${this.pointFontSize}px Arial`;
                     this.floorCtx.textAlign = 'center'; this.floorCtx.textBaseline = 'middle';
                     this.floorCtx.fillText(p.id, p.x, p.y);
                 });
@@ -437,10 +866,13 @@
                 const container = document.getElementById('preview-container'); container.innerHTML = ''; let count = 0;
                 this.floorPoints.filter(p => p.floor === this.currentFloor).forEach(p => {
                     const idxs = this.pointPanoramaMap.get(p.id);
-                    if (idxs) { idxs.forEach(i => { count++; const div = document.createElement('div'); div.className = 'preview-item';
-                        div.innerHTML = `<img class="preview-img" src="${this.panoramas[i].url}"><div class="preview-info"><div class="preview-name">${p.id}-${this.panoramas[i].name}</div></div>`;
-                        div.onclick = () => this.openPano(i, p.id); container.appendChild(div);
-                    }); }
+                    if (idxs) {
+                        idxs.forEach(i => {
+                            count++; const div = document.createElement('div'); div.className = 'preview-item';
+                            div.innerHTML = `<img class="preview-img" src="${this.panoramas[i].url}"><div class="preview-info"><div class="preview-name">${p.id}-${this.panoramas[i].name}</div></div>`;
+                            div.onclick = () => this.openPano(i, p.id); container.appendChild(div);
+                        });
+                    }
                 });
                 document.getElementById('panorama-count').textContent = count;
                 if (!count) container.innerHTML = '<div style="width:100%;text-align:center;padding:40px;opacity:0.7;">暂无全景图</div>';
@@ -453,22 +885,25 @@
                 this.floorPoints.filter(p => p.floor === this.currentFloor).forEach(p => {
                     const item = document.createElement('div'); item.className = 'panorama-list-item';
                     item.innerHTML = `<div>${p.id}</div>`;
-                    item.onclick = () => { document.querySelectorAll('.panorama-list-item').forEach(el=>el.classList.remove('active')); item.classList.add('active'); this.renderModalPanos(p.id); };
+                    item.onclick = () => { document.querySelectorAll('.panorama-list-item').forEach(el => el.classList.remove('active')); item.classList.add('active'); this.renderModalPanos(p.id); };
                     list.appendChild(item);
                 });
             }
             renderModalPanos(pId) {
                 const list = document.getElementById('panorama-list-modal'); list.innerHTML = '';
                 const idxs = this.pointPanoramaMap.get(pId);
-                if (idxs) { idxs.forEach(idx => {
-                    const item = document.createElement('div'); item.className = 'panorama-list-item-modal';
-                    item.innerHTML = `<span>${this.panoramas[idx].name}</span><button class="panorama-delete-btn">删除</button>`;
-                    item.querySelector('button').onclick = () => { this.pointPanoramaMap.set(pId, this.pointPanoramaMap.get(pId).filter(i => i !== idx)); this.renderModalPanos(pId); this.updatePreviewItems(); this.renderFloorPlan(); this.saveAllData(); };
-                    list.appendChild(item);
-                }); }
+                if (idxs) {
+                    idxs.forEach(idx => {
+                        const item = document.createElement('div'); item.className = 'panorama-list-item-modal';
+                        item.innerHTML = `<span>${this.panoramas[idx].name}</span><button class="panorama-delete-btn">删除</button>`;
+                        item.querySelector('button').onclick = () => { this.pointPanoramaMap.set(pId, this.pointPanoramaMap.get(pId).filter(i => i !== idx)); this.renderModalPanos(pId); this.updatePreviewItems(); this.renderFloorPlan(); this.saveAllData(); };
+                        list.appendChild(item);
+                    });
+                }
             }
         }
         document.addEventListener('DOMContentLoaded', () => new PanoramaManagementSystem());
     </script>
 </body>
+
 </html>
