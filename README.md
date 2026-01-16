@@ -1,4 +1,4 @@
-# 康业全景图空间标注与可视化管理系统 (Panorama Management System)
+# 全景图空间标注与可视化管理系统 (Panorama Management System)
 
 一个基于 WebGL 和 Canvas 开发的轻量级、高性能全景图布点与管理工具。支持 2D 平面图交互标注与 3D 沉浸式全景预览。
 
