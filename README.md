@@ -5,8 +5,7 @@
 ## 🚀 项目演示 (Demo)
 *https://igkan.github.io/KangYe/*
 
-![项目预览图](Images/Preview.jpg)
-
+<img src="Images/Preview.jpg" width="600" alt="项目预览图">
 
 
 
