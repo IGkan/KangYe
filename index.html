@@ -643,6 +643,13 @@
                 this.cameraStream = null;
             }
 
+            // 添加日期格式化辅助方法
+            formatDisplayDate(dateStr) {
+                if (!dateStr || dateStr.length !== 8) return '';
+                // 将YYYYMMDD格式化为YYYY-MM-DD
+                return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+            }
+
             updateFloorButtonsUI() {
                 const container = document.getElementById('floor-buttons-container');
                 const addBtn = document.getElementById('add-floor-btn');
@@ -848,113 +855,38 @@
 
             startAssociate(pointId) {
                 const input = document.getElementById('file-input-panorama');
-                input.onchange = (e) => {
-                    const files = Array.from(e.target.files);
-                    files.forEach(file => {
-                        // 使用标准function函数以确保this上下文正确 (exif-js要求)
-                        EXIF.getData(file, function() {
-                            let timeStr;
-                            
-                            // Debug: 在控制台打印所有查找到的标签，方便排查
-                            console.log("Processing File:", file.name);
-                            console.log("All Tags:", EXIF.getAllTags(this));
-
-                            // 1. 尝试读取 EXIF 日期 (Original > Digitized > DateTime)
-                            const exifDate = EXIF.getTag(this, "DateTimeOriginal") || 
-                                             EXIF.getTag(this, "DateTimeDigitized") || 
-                                             EXIF.getTag(this, "DateTime");
-                            
-                            if (exifDate) {
-                                // 成功读取 EXIF
-                                timeStr = exifDate.toString().trim().replace(/:/g, "").replace(/\s+/g, "_");
-                                console.log("Using EXIF Date:", timeStr);
-                            } else if (file.lastModified) {
-                                // 2. 失败后的回退方案：使用文件最后修改时间 (通常就是拍摄时间，比当前时间准确)
-                                const d = new Date(file.lastModified);
-                                const year = d.getFullYear();
-                                const month = String(d.getMonth() + 1).padStart(2, '0');
-                                const day = String(d.getDate()).padStart(2, '0');
-                                const hour = String(d.getHours()).padStart(2, '0');
-                                const minute = String(d.getMinutes()).padStart(2, '0');
-                                const second = String(d.getSeconds()).padStart(2, '0');
-                                timeStr = `${year}${month}${day}_${hour}${minute}${second}`;
-                                console.log("EXIF missing, using File LastModified Date:", timeStr);
-                            } else {
-                                // 3. 最后的保底：当前时间
-                                const now = new Date();
-                                timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
-                                console.log("Using Current Date (Fallback):", timeStr);
-                            }
-
-                            const reader = new FileReader();
-                            reader.onload = (re) => {
-                                const img = new Image();
-                                img.src = re.target.result;
-                                img.onload = () => {
-                                    const canvas = document.createElement('canvas');
-                                    const ctx = canvas.getContext('2d');
-                                    const maxWidth = 4096;
-                                    let width = img.width;
-                                    let height = img.height;
-
-                                    if (width > maxWidth) {
-                                        height = (maxWidth / width) * height;
-                                        width = maxWidth;
-                                    }
-
-                                    canvas.width = width;
-                                    canvas.height = height;
-                                    ctx.drawImage(img, 0, 0, width, height);
-
-                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
-                                    
-                                    const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                                    const ext = file.name.substring(file.name.lastIndexOf('.'));
-                                    const newName = `${originalName}_${timeStr}${ext}`;
-
-                                    // 注意：这里需要用箭头函数或保存外部this，因为在reader回调中this已变
-                                    // 这里的 'this' 指向的是 PanoramaManagementSystem 实例 (通过箭头函数保持)
-                                    // 但外部的 'this' 是 exif data，所以我们需要访问 systemInstance
-                                    
-                                    // 修正：上面的代码都在 input.onchange 的箭头函数作用域内，
-                                    // 但 EXIF.getData 是普通函数，这里访问不到 class 实例的 this。
-                                    // 所以我们需要在最外层保存 class 实例引用。
-                                };
-                            };
-                            reader.readAsDataURL(file);
-                        });
-                    });
-                };
-                
-                // 修正：因为 EXIF.getData 使用了 function()，导致内部无法直接访问类的 this (System实例)
-                // 我们需要在触发 onchange 时保存类的 this
                 const systemInstance = this;
                 
-                // 重新绑定 input.onchange 以使用 systemInstance
                 input.onchange = (e) => {
                     const files = Array.from(e.target.files);
                     files.forEach(file => {
                         EXIF.getData(file, function() {
                             let timeStr;
-                            // 此时 this 指向 file (exif-js 的行为)
                             const exifDate = EXIF.getTag(this, "DateTimeOriginal") || 
                                              EXIF.getTag(this, "DateTimeDigitized") || 
                                              EXIF.getTag(this, "DateTime");
                             
                             if (exifDate) {
                                 timeStr = exifDate.toString().trim().replace(/:/g, "").replace(/\s+/g, "_");
+                                // 只保留日期部分，去掉后面的时间
+                                const datePart = timeStr.split('_')[0];
+                                if (datePart.length >= 8) {
+                                    timeStr = datePart.substring(0, 8);
+                                }
+                                console.log("Using EXIF Date (Date only):", timeStr);
                             } else if (file.lastModified) {
                                 const d = new Date(file.lastModified);
                                 const year = d.getFullYear();
                                 const month = String(d.getMonth() + 1).padStart(2, '0');
                                 const day = String(d.getDate()).padStart(2, '0');
-                                const hour = String(d.getHours()).padStart(2, '0');
-                                const minute = String(d.getMinutes()).padStart(2, '0');
-                                const second = String(d.getSeconds()).padStart(2, '0');
-                                timeStr = `${year}${month}${day}_${hour}${minute}${second}`;
+                                // 只保留日期，去掉小时分钟秒
+                                timeStr = `${year}${month}${day}`;
+                                console.log("EXIF missing, using File LastModified Date (Date only):", timeStr);
                             } else {
                                 const now = new Date();
-                                timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+                                // 只保留日期，去掉小时分钟秒
+                                timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+                                console.log("Using Current Date (Fallback, Date only):", timeStr);
                             }
 
                             const reader = new FileReader();
@@ -1058,23 +990,66 @@
             }
 
             updatePreviewItems() {
-                const container = document.getElementById('preview-container'); container.innerHTML = ''; let count = 0;
-                this.floorPoints.filter(p => p.floor === this.currentFloor).forEach(p => {
+                const container = document.getElementById('preview-container');
+                container.innerHTML = '';
+                let count = 0;
+                
+                // 按点位分组，只显示最新的全景图
+                const floorPoints = this.floorPoints.filter(p => p.floor === this.currentFloor);
+                floorPoints.forEach(p => {
                     const idxs = this.pointPanoramaMap.get(p.id);
-                    if (idxs) {
-                        idxs.forEach(i => {
-                            count++; const div = document.createElement('div'); div.className = 'preview-item';
-                            div.innerHTML = `<img class="preview-img" src="${this.panoramas[i].url}"><div class="preview-info"><div class="preview-name">${p.id}-${this.panoramas[i].name}</div></div>`;
-                            div.onclick = () => this.openPano(i, p.id); container.appendChild(div);
+                    if (idxs && idxs.length > 0) {
+                        // 找出最新的全景图（按文件名中的日期排序）
+                        const panoramaDetails = idxs.map(idx => {
+                            const pano = this.panoramas[idx];
+                            // 从文件名中提取日期部分（假设格式为 xxxx_YYYYMMDD.xxx）
+                            const name = pano.name;
+                            const dateMatch = name.match(/_(\d{8})/);
+                            let dateStr = '';
+                            if (dateMatch && dateMatch[1]) {
+                                dateStr = dateMatch[1];
+                            } else {
+                                // 如果没有找到8位日期，使用文件名的最后部分
+                                const parts = name.split('_');
+                                dateStr = parts[parts.length - 1].split('.')[0];
+                            }
+                            
+                            return {
+                                idx: idx,
+                                pano: pano,
+                                date: dateStr,
+                                timestamp: dateStr // 假设YYYYMMDD格式可以直接比较
+                            };
                         });
+                        
+                        // 按日期降序排序（最新的在前）
+                        panoramaDetails.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+                        
+                        // 只显示最新的一个
+                        const latest = panoramaDetails[0];
+                        count++;
+                        const div = document.createElement('div');
+                        div.className = 'preview-item';
+                        
+                        // 修改：只显示点位编号和格式化后的日期
+                        const displayDate = this.formatDisplayDate(latest.date);
+                        div.innerHTML = `
+                            <img class="preview-img" src="${latest.pano.url}">
+                            <div class="preview-info">
+                                <div class="preview-name">${p.id}${displayDate ? ' (' + displayDate + ')' : ''}</div>
+                            </div>`;
+                        div.onclick = () => this.openPano(latest.idx, p.id);
+                        container.appendChild(div);
                     }
                 });
+                
                 document.getElementById('panorama-count').textContent = count;
                 if (!count) container.innerHTML = '<div style="width:100%;text-align:center;padding:40px;opacity:0.7;">暂无全景图</div>';
             }
 
             adjustCanvasSize() { const p = this.floorCanvas.parentElement; this.floorCanvas.width = p.clientWidth; this.floorCanvas.height = p.clientHeight; this.autoAdjustImage(); this.renderFloorPlan(); }
             async clearAllData() { await this.idb.clear(); location.reload(); }
+            
             renderModalPoints() {
                 const list = document.getElementById('point-list'); list.innerHTML = '';
                 this.floorPoints.filter(p => p.floor === this.currentFloor).forEach(p => {
@@ -1084,16 +1059,85 @@
                     list.appendChild(item);
                 });
             }
+            
             renderModalPanos(pId) {
-                const list = document.getElementById('panorama-list-modal'); list.innerHTML = '';
+                const list = document.getElementById('panorama-list-modal');
+                list.innerHTML = '';
                 const idxs = this.pointPanoramaMap.get(pId);
-                if (idxs) {
-                    idxs.forEach(idx => {
-                        const item = document.createElement('div'); item.className = 'panorama-list-item-modal';
-                        item.innerHTML = `<span>${this.panoramas[idx].name}</span><button class="panorama-delete-btn">删除</button>`;
-                        item.querySelector('button').onclick = () => { this.pointPanoramaMap.set(pId, this.pointPanoramaMap.get(pId).filter(i => i !== idx)); this.renderModalPanos(pId); this.updatePreviewItems(); this.renderFloorPlan(); this.saveAllData(); };
+                if (idxs && idxs.length > 0) {
+                    // 获取所有全景图信息并按日期排序
+                    const panoramaDetails = idxs.map(idx => {
+                        const pano = this.panoramas[idx];
+                        const name = pano.name;
+                        const dateMatch = name.match(/_(\d{8})/);
+                        let dateStr = '';
+                        if (dateMatch && dateMatch[1]) {
+                            dateStr = dateMatch[1];
+                        } else {
+                            const parts = name.split('_');
+                            dateStr = parts[parts.length - 1].split('.')[0];
+                        }
+                        
+                        // 提取原始文件名（去掉日期后缀）
+                        const originalName = name.replace(new RegExp(`_${dateStr}.*$`), '') || name;
+                        
+                        return {
+                            idx: idx,
+                            pano: pano,
+                            date: dateStr,
+                            timestamp: dateStr,
+                            originalName: originalName,
+                            displayDate: this.formatDisplayDate(dateStr)
+                        };
+                    });
+                    
+                    // 按日期降序排序（最新的在前）
+                    panoramaDetails.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+                    
+                    // 显示所有全景图，不再隐藏
+                    panoramaDetails.forEach((detail, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'panorama-list-item-modal';
+                        
+                        // 如果是第一个（最新的），标记为最新
+                        const isLatest = index === 0;
+                        const latestMark = isLatest ? '<span style="color:#4CAF50;font-weight:bold;margin-left:5px;">(最新)</span>' : '';
+                        
+                        item.innerHTML = `
+                            <div style="display:flex; flex-direction:column;">
+                                <span>${detail.originalName}</span>
+                                <small style="opacity:0.7;margin-top:2px;">拍摄日期: ${detail.displayDate || '未知'}</small>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                ${latestMark}
+                                <button class="panorama-delete-btn">删除</button>
+                            </div>`;
+                        
+                        item.querySelector('button').onclick = () => {
+                            // 删除这个全景图
+                            const updatedIdxs = idxs.filter(i => i !== detail.idx);
+                            if (updatedIdxs.length > 0) {
+                                this.pointPanoramaMap.set(pId, updatedIdxs);
+                            } else {
+                                this.pointPanoramaMap.delete(pId);
+                            }
+                            this.renderModalPanos(pId);
+                            this.updatePreviewItems();
+                            this.renderFloorPlan();
+                            this.saveAllData();
+                        };
                         list.appendChild(item);
                     });
+                    
+                    // 显示图片总数
+                    const countInfo = document.createElement('div');
+                    countInfo.className = 'panorama-list-item-modal';
+                    countInfo.style.opacity = '0.7';
+                    countInfo.style.fontSize = '0.9em';
+                    countInfo.style.textAlign = 'center';
+                    countInfo.style.marginTop = '10px';
+                    countInfo.innerHTML = `<span>共 ${idxs.length} 张全景图</span>`;
+                    list.appendChild(countInfo);
                 }
             }
         }
